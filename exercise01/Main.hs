@@ -58,7 +58,7 @@ id_TYPE i = i
 
 -- suppose our arrow type `♣ ▷ ♣` is `ALL`
 type ALL = Bool
--- thus, the only arrows/elements are `All True` and `All False`
+-- thus, the only arrows/elements are `True` and `False`
 -- with composition/append as `&&`
 -- (∘) ∷ (♣ ▷ ♣) → (♣ ▷ ♣) → (♣ ▷ ♣)
 compose_ALL ∷ ALL → ALL → ALL
