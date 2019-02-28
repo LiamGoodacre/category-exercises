@@ -57,17 +57,17 @@ id_TYPE i = i
 -- identity is called mempty
 
 -- suppose our arrow type `♣ ▷ ♣` is `ALL`
-newtype ALL = All Bool
+type ALL = Bool
 -- thus, the only arrows/elements are `All True` and `All False`
 -- with composition/append as `&&`
 -- (∘) ∷ (♣ ▷ ♣) → (♣ ▷ ♣) → (♣ ▷ ♣)
 compose_ALL ∷ ALL → ALL → ALL
-compose_ALL (All l) (All r) = All (l && r)
+compose_ALL l r = l && r
 -- the associativity of `∘` follows from that of `&&`
 -- and the identity/mempty for this composition is `True`
 -- id ∷ ♣ ▷ ♣
 identity_ALL ∷ ALL
-identity_ALL = All True
+identity_ALL = True
 
 
 -- We can construct a monoid from an existing category by picking one object and
@@ -76,23 +76,23 @@ identity_ALL = All True
 -- Regard all the arrows `f ∷ Int ▷ Int` as elements of the monoid `f ∷ ♣`.
 -- Then, append follows from composition of the original category;
 -- and mempty follows from the identity.
-newtype ENDO_INT = EndoInt (Int → Int)
+type ENDO_INT = Int → Int
 -- (<>) ∷ ♣ → ♣ → ♣
 compose_ENDO_INT ∷ ENDO_INT → ENDO_INT → ENDO_INT
-compose_ENDO_INT (EndoInt l) (EndoInt r) = EndoInt (compose_TYPE l r)
+compose_ENDO_INT l r = compose_TYPE l r
 -- mempty ∷ ♣
 id_ENDO_INT ∷ ENDO_INT
-id_ENDO_INT = EndoInt id_TYPE
+id_ENDO_INT = id_TYPE
 
 -- We can clearly generalise this in haskell by allowing the user to pick which
 -- object they care about.
-newtype ENDO i = Endo (i → i)
+type ENDO i = i → i
 -- (<>) ∷ ♣ → ♣ → ♣
 compose_ENDO ∷ ∀ i . ENDO i → ENDO i → ENDO i
-compose_ENDO (Endo l) (Endo r) = Endo (compose_TYPE l r)
+compose_ENDO l r = compose_TYPE l r
 -- mempty ∷ ♣
 id_ENDO ∷ ∀ i . ENDO i
-id_ENDO = Endo id_TYPE
+id_ENDO = id_TYPE
 
 
 -- Another monoid that we probably already know is lists with `(++)` and `[]`
@@ -115,18 +115,17 @@ id_LIST = []
 -- This could be modelled in haskell with `(TYPExENDO i) Int String`:
 -- We don't mention objects of `ENDO i` as type arguments
 -- because there's only one argument.
-data (TYPExENDO i) d c where
-  TypexEndo ∷ (d → c) → ENDO i → (TYPExENDO i) d c
+type (TYPExENDO i) d c = (d → c, ENDO i)
 -- composition pairwise delegates to the underlying categories
 -- <∘, <>> ∷ ∀ a b x . (<a, ♣> ▷ <b, ♣>) → (<x, ♣> ▷ <a, ♣>) → (<x, ♣> ▷ <b, ♣>)
 compose_TYPExENDO ∷ ∀ i a b x .
   (TYPExENDO i) a b → (TYPExENDO i) x a → (TYPExENDO i) x b
-compose_TYPExENDO (TypexEndo ab l) (TypexEndo xa r) =
-  TypexEndo (compose_TYPE ab xa) (compose_ENDO l r)
+compose_TYPExENDO (ab, l) (xa, r) =
+  (compose_TYPE ab xa, compose_ENDO l r)
 -- as is identity:
 -- <id, mempty> ∷ ∀ x . <x, ♣> ▷ <x, ♣>
 id_TYPExENDO ∷ ∀ i x . (TYPExENDO i) x x
-id_TYPExENDO = TypexEndo id_TYPE id_ENDO
+id_TYPExENDO = (id_TYPE, id_ENDO)
 
 
 -- ---
