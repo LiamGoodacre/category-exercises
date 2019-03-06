@@ -110,7 +110,7 @@ instance Monoid (ENDO i) where
   mempty = id_ENDO
 
 
--- Another monoid that we probably already know is lists with `(++)` and `[]`
+-- Another monoid that you probably already know is lists with `(++)` and `[]`
 compose_LIST ∷ ∀ i . [i] → [i] → [i]
 compose_LIST l r = l ++ r
 id_LIST ∷ ∀ i . [i]
@@ -130,21 +130,36 @@ id_LIST = []
 -- This could be modelled in Haskell with `(TYPExENDO i) Int String`:
 -- We don't mention objects of `ENDO i` as type arguments
 -- because there's only one argument.
-type (TYPExENDO i) d c = (d → c, ENDO i)
+data (TYPExENDO i) d c = TypeEndo (d → c) (ENDO i)
 -- composition pairwise delegates to the underlying categories
 -- <∘, <>> ∷ ∀ a b x . (<a, ♣> ▷ <b, ♣>) → (<x, ♣> ▷ <a, ♣>) → (<x, ♣> ▷ <b, ♣>)
 compose_TYPExENDO ∷ ∀ i a b x .
   (TYPExENDO i) a b → (TYPExENDO i) x a → (TYPExENDO i) x b
-compose_TYPExENDO (ab, l) (xa, r) =
-  (compose_TYPE ab xa, compose_ENDO l r)
+compose_TYPExENDO (TypeEndo ab l) (TypeEndo xa r) =
+  TypeEndo (compose_TYPE ab xa) (compose_ENDO l r)
 -- as is identity:
 -- <id, mempty> ∷ ∀ x . <x, ♣> ▷ <x, ♣>
 id_TYPExENDO ∷ ∀ i x . (TYPExENDO i) x x
-id_TYPExENDO = (id_TYPE, id_ENDO)
+id_TYPExENDO = TypeEndo id_TYPE id_ENDO
 
 
--- ---
+--- TODO
 
+-- For every category, there is an 'opposite' category.
+-- This is exactly the same category, but we look at all the arrows as if they
+-- are going in the other direction.
+-- With `TYPE` the arrow type `d ▷ c` is the function type `d → c`,
+-- When considering the opposite of `TYPE`: the `Op TYPE` category;
+-- here the arrow type `d ▷ c` is the type `c → d`
+-- (∘) ∷ ∀ a b x . (a ▷ b) → (x ▷ a) → (x ▷ b)
+compose_OpTYPE ∷ ∀ a b x . (b → a) → (a → x) → (b → x)
+compose_OpTYPE ba ax b = ax (ba b)
+-- the identity arrows are identical
+id_OpTYPE ∷ ∀ i . i → i
+id_OpTYPE i = i
+
+
+-- TODO
 
 -- functors map from one category to another
 -- a functor `F` from a category `C` to a category `D`
