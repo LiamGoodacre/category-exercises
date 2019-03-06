@@ -12,9 +12,9 @@ module Main where
 -- the `f` is a term in that type
 -- the labels `A` and `B` are called 'objects'
 -- objects aren't necessarily types, e.g:
--- 1. where `List ▷ Maybe` is the type `∀ i . List i → Maybe i`
--- 2. where `0 ▷ 1` is the type `0 ≤ 1`
--- 3. where `<a,b> ▷ <s,t>` is the type `Lens s t a b`
+-- 1. `List ▷ Maybe` is the type `∀ i . List i → Maybe i`
+-- 2. `0 ▷ 1` is the type `0 ≤ 1`
+-- 3. `<a,b> ▷ <s,t>` is the type `Lens s t a b`
 -- to know what type `A ▷ B` is, we need to know what category we're using
 
 -- any two compatible arrows can be composed
@@ -55,44 +55,59 @@ id_TYPE i = i
 -- The arrows are referred to as the elements or members of the monoid.
 -- composition `(∘)` is called append `(<>)`
 -- identity is called mempty
+-- To capture this idea, Haskell has a type class called `Monoid`
 
--- suppose our arrow type `♣ ▷ ♣` is `ALL`
-type ALL = Bool
--- thus, the only arrows/elements are `True` and `False`
--- with composition/append as `&&`
+-- consider the monoid of booleans under `&&`
+-- the elements of the monoid are `True` and `False`
+-- this means our arrow type `♣ ▷ ♣` is equivalent to `Bool`
+-- let's make a newtype for this:
+newtype ALL = All Bool
+-- composition/append is `&&`
 -- (∘) ∷ (♣ ▷ ♣) → (♣ ▷ ♣) → (♣ ▷ ♣)
 compose_ALL ∷ ALL → ALL → ALL
-compose_ALL l r = l && r
+compose_ALL (All l) (All r) = All (l && r)
 -- the associativity of `∘` follows from that of `&&`
 -- and the identity/mempty for this composition is `True`
 -- id ∷ ♣ ▷ ♣
-identity_ALL ∷ ALL
-identity_ALL = True
-
+id_ALL ∷ ALL
+id_ALL = All True
+-- we can use these definitions to declare a Monoid instance:
+instance Semigroup ALL where
+  (<>) = compose_ALL
+instance Monoid ALL where
+  mempty = id_ALL
 
 -- We can construct a monoid from an existing category by picking one object and
--- it's arrows, and forgetting about everything else.
+-- all the arrows that start and end at that object - forgetting about everything else.
 -- If we do this with the `TYPE` category; pick an object, e.g `Int`.
 -- Regard all the arrows `f ∷ Int ▷ Int` as elements of the monoid `f ∷ ♣`.
 -- Then, append follows from composition of the original category;
 -- and mempty follows from the identity.
-type ENDO_INT = Int → Int
+newtype ENDO_INT = EndoInt (Int → Int)
 -- (<>) ∷ ♣ → ♣ → ♣
 compose_ENDO_INT ∷ ENDO_INT → ENDO_INT → ENDO_INT
-compose_ENDO_INT l r = compose_TYPE l r
+compose_ENDO_INT (EndoInt l) (EndoInt r) = EndoInt (compose_TYPE l r)
 -- mempty ∷ ♣
 id_ENDO_INT ∷ ENDO_INT
-id_ENDO_INT = id_TYPE
+id_ENDO_INT = EndoInt id_TYPE
+instance Semigroup ENDO_INT where
+  (<>) = compose_ENDO_INT
+instance Monoid ENDO_INT where
+  mempty = id_ENDO_INT
 
--- We can clearly generalise this in haskell by allowing the user to pick which
+-- We can clearly generalise this in Haskell by allowing the user to pick which
 -- object they care about.
-type ENDO i = i → i
+newtype ENDO i = Endo (i → i)
 -- (<>) ∷ ♣ → ♣ → ♣
 compose_ENDO ∷ ∀ i . ENDO i → ENDO i → ENDO i
-compose_ENDO l r = compose_TYPE l r
+compose_ENDO (Endo l) (Endo r) = Endo (compose_TYPE l r)
 -- mempty ∷ ♣
 id_ENDO ∷ ∀ i . ENDO i
-id_ENDO = id_TYPE
+id_ENDO = Endo id_TYPE
+instance Semigroup (ENDO i) where
+  (<>) = compose_ENDO
+instance Monoid (ENDO i) where
+  mempty = id_ENDO
 
 
 -- Another monoid that we probably already know is lists with `(++)` and `[]`
@@ -112,7 +127,7 @@ id_LIST = []
 -- that the objects are taken pair-wise as follows:
 -- Given `f ∷ Int ▷ String` (in `TYPE`) and `g ∷ ♣` (in `ENDO i`)
 -- We have the arrow `<f, g> ∷ <Int, ♣> ▷ <String, ♣>`
--- This could be modelled in haskell with `(TYPExENDO i) Int String`:
+-- This could be modelled in Haskell with `(TYPExENDO i) Int String`:
 -- We don't mention objects of `ENDO i` as type arguments
 -- because there's only one argument.
 type (TYPExENDO i) d c = (d → c, ENDO i)
