@@ -123,7 +123,7 @@ id_LIST = []
 -- Which we will call `TYPE×ENDO i`.
 -- An object of `TYPE×ENDO i` is one object from `TYPE` and one from `ENDO i`,
 -- for example `<Int, ♣>` - remember `ENDO i` only has one object (`♣`)
--- An arrow of `TYPE×ENDO i` is is arrow from `TYPE` and one from `ENDO i` such
+-- An arrow of `TYPE×ENDO i` is one arrow from `TYPE` and one from `ENDO i` such
 -- that the objects are taken pair-wise as follows:
 -- Given `f ∷ Int ▷ String` (in `TYPE`) and `g ∷ ♣` (in `ENDO i`)
 -- We have the arrow `<f, g> ∷ <Int, ♣> ▷ <String, ♣>`
