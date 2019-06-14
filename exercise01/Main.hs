@@ -11,19 +11,19 @@ module Main where
 -- the `A ▷ B` bit is a type
 -- the `f` is a term in that type
 -- the labels `A` and `B` are called 'objects'
--- objects aren't necessarily types, e.g:
--- 1. `List ▷ Maybe` is the type `∀ i . List i → Maybe i`
--- 2. `0 ▷ 1` is the type `0 ≤ 1`
--- 3. `<a,b> ▷ <s,t>` is the type `Lens s t a b`
+-- objects aren't necessarily types of kind `Type`, e.g:
+-- 1. `List ▷ Maybe` could be the type `∀ i . List i → Maybe i`, where `List` and `Maybe` have kind `Type → Type`
+-- 2. `0 ▷ 1` could be the type `0 ≤ 1`, where `0` and `1` are natural numbers
+-- 3. `<a,b> ▷ <s,t>` could be the type `Lens s t a b`, where `<a,b>` and `<s,t>` are pairs of types
 -- to know what type `A ▷ B` is, we need to know what category we're using
 
 -- any two compatible arrows can be composed
--- compatible means that equal objects line up
+-- compatible means that "equal" objects line up
 -- so, given `f ∷ A ▷ B` and `g ∷ X ▷ A`
 -- because the two `A`s can line up,
 -- we can have the composition `f ∘ g ∷ X ▷ B`
 -- this composition is always a function `(∘) ∷ (A ▷ B) → (X ▷ A) → (X ▷ B)`
--- which function `(∘)` denotes, depends on which category is involved
+-- which function `(∘)` denotes, also depends on which category is involved
 
 -- for every object `I` there is an identity arrow: `id ∷ I ▷ I`
 
@@ -32,8 +32,10 @@ module Main where
 -- 2. Right Identity: `f ≅ (f ∘ id)`
 -- 3. Associativity: `((f ∘ g) ∘ h) ≅ (f ∘ (g ∘ h))`
 
+-- The Left & Right Identity laws express that the `id` arrow must effectively be a no-op
+
 -- there is a category called `TYPE` in which
--- * objects are proper types, e.g: `Bool`, `Int`
+-- * objects are proper types, e.g: `Bool`, `Int` (things of kind `Type`)
 -- * arrow types are function types, e.g: `Bool ▷ Int` is `Bool → Int`
 -- composition is regular function composition
 -- each identity arrow is the identity function
@@ -52,15 +54,15 @@ id_TYPE i = i
 -- A monoid is a category with exactly one object, say `♣`.
 -- The only arrow type is `♣ ▷ ♣`.
 -- Therefore all the arrows are composable.
--- The arrows are referred to as the elements or members of the monoid.
+-- The arrows are referred to as the "elements" or "members" of the monoid.
 -- composition `(∘)` is called append `(<>)`
--- identity is called mempty
+-- identity `id` is called `mempty`
 -- To capture this idea, Haskell has a type class called `Monoid`
 
 -- consider the monoid of booleans under `&&`
 -- the elements of the monoid are `True` and `False`
 -- this means our arrow type `♣ ▷ ♣` is equivalent to `Bool`
--- let's make a newtype for this:
+-- let's make a newtype for this - so we have `ALL = ♣ ▷ ♣`
 newtype ALL = All Bool
 -- composition/append is `&&`
 -- (∘) ∷ (♣ ▷ ♣) → (♣ ▷ ♣) → (♣ ▷ ♣)
@@ -76,6 +78,7 @@ instance Semigroup ALL where
   (<>) = compose_ALL
 instance Monoid ALL where
   mempty = id_ALL
+
 
 -- We can construct a monoid from an existing category by picking one object and
 -- all the arrows that start and end at that object - forgetting about everything else.
@@ -95,8 +98,9 @@ instance Semigroup ENDO_INT where
 instance Monoid ENDO_INT where
   mempty = id_ENDO_INT
 
+
 -- We can clearly generalise this in Haskell by allowing the user to pick which
--- object they care about.
+-- object from `TYPE` that they care about.
 newtype ENDO i = Endo (i → i)
 -- (<>) ∷ ♣ → ♣ → ♣
 compose_ENDO ∷ ∀ i . ENDO i → ENDO i → ENDO i
@@ -110,7 +114,7 @@ instance Monoid (ENDO i) where
   mempty = id_ENDO
 
 
--- Another monoid that you probably already know is lists with `(++)` and `[]`
+-- Another monoid that you perhaps already know of is lists with `(++)` and `[]`
 compose_LIST ∷ ∀ i . [i] → [i] → [i]
 compose_LIST l r = l ++ r
 id_LIST ∷ ∀ i . [i]
@@ -125,20 +129,20 @@ id_LIST = []
 -- for example `<Int, ♣>` - remember `ENDO i` only has one object (`♣`)
 -- An arrow of `TYPE×ENDO i` is one arrow from `TYPE` and one from `ENDO i` such
 -- that the objects are taken pair-wise as follows:
--- Given `f ∷ Int ▷ String` (in `TYPE`) and `g ∷ ♣` (in `ENDO i`)
+-- Given `f ∷ Int ▷ String` (in `TYPE`) and `g ∷ ♣ ▷ ♣` (in `ENDO i`)
 -- We have the arrow `<f, g> ∷ <Int, ♣> ▷ <String, ♣>`
 -- This could be modelled in Haskell with `(TYPExENDO i) Int String`:
 -- We don't mention objects of `ENDO i` as type arguments
--- because there's only one argument.
+-- because there's only one thing they could be (`♣`).
 data (TYPExENDO i) d c = TypeEndo (d → c) (ENDO i)
 -- composition pairwise delegates to the underlying categories
--- <∘, <>> ∷ ∀ a b x . (<a, ♣> ▷ <b, ♣>) → (<x, ♣> ▷ <a, ♣>) → (<x, ♣> ▷ <b, ♣>)
+-- ∘ = <∘, <>> ∷ ∀ a b x . (<a, ♣> ▷ <b, ♣>) → (<x, ♣> ▷ <a, ♣>) → (<x, ♣> ▷ <b, ♣>)
 compose_TYPExENDO ∷ ∀ i a b x .
   (TYPExENDO i) a b → (TYPExENDO i) x a → (TYPExENDO i) x b
 compose_TYPExENDO (TypeEndo ab l) (TypeEndo xa r) =
   TypeEndo (compose_TYPE ab xa) (compose_ENDO l r)
 -- as is identity:
--- <id, mempty> ∷ ∀ x . <x, ♣> ▷ <x, ♣>
+-- id = <id, mempty> ∷ ∀ x . <x, ♣> ▷ <x, ♣>
 id_TYPExENDO ∷ ∀ i x . (TYPExENDO i) x x
 id_TYPExENDO = TypeEndo id_TYPE id_ENDO
 
