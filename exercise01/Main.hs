@@ -6,7 +6,6 @@
 module Main where
 
 -- a (locally small) category consists of 'arrows'
--- arrows are programs
 -- an arrow is denoted `f ∷ A ▷ B`
 -- the `A ▷ B` bit is a type
 -- the `f` is a term in that type
@@ -31,8 +30,6 @@ module Main where
 -- 1. Left Identity: `(id ∘ f) ≅ f`
 -- 2. Right Identity: `f ≅ (f ∘ id)`
 -- 3. Associativity: `((f ∘ g) ∘ h) ≅ (f ∘ (g ∘ h))`
-
--- The Left & Right Identity laws express that the `id` arrow must effectively be a no-op
 
 -- there is a category called `TYPE` in which
 -- * objects are proper types, e.g: `Bool`, `Int` (things of kind `Type`)
@@ -129,38 +126,53 @@ id_LIST = []
 -- for example `<Int, ♣>` - remember `ENDO i` only has one object (`♣`)
 -- An arrow of `TYPE×ENDO i` is one arrow from `TYPE` and one from `ENDO i` such
 -- that the objects are taken pair-wise as follows:
--- Given `f ∷ Int ▷ String` (in `TYPE`) and `g ∷ ♣ ▷ ♣` (in `ENDO i`)
+-- Given `f ∷ Int ▷ String` (from `TYPE`) and `g ∷ ♣ ▷ ♣` (from `ENDO i`)
 -- We have the arrow `<f, g> ∷ <Int, ♣> ▷ <String, ♣>`
 -- This could be modelled in Haskell with `(TYPExENDO i) Int String`:
 -- We don't mention objects of `ENDO i` as type arguments
 -- because there's only one thing they could be (`♣`).
 data (TYPExENDO i) d c = TypeEndo (d → c) (ENDO i)
 -- composition pairwise delegates to the underlying categories
--- ∘ = <∘, <>> ∷ ∀ a b x . (<a, ♣> ▷ <b, ♣>) → (<x, ♣> ▷ <a, ♣>) → (<x, ♣> ▷ <b, ♣>)
+-- ∘ = <∘, ∘> ∷ ∀ a b x . (<a, ♣> ▷ <b, ♣>) → (<x, ♣> ▷ <a, ♣>) → (<x, ♣> ▷ <b, ♣>)
 compose_TYPExENDO ∷ ∀ i a b x .
   (TYPExENDO i) a b → (TYPExENDO i) x a → (TYPExENDO i) x b
 compose_TYPExENDO (TypeEndo ab l) (TypeEndo xa r) =
   TypeEndo (compose_TYPE ab xa) (compose_ENDO l r)
 -- as is identity:
--- id = <id, mempty> ∷ ∀ x . <x, ♣> ▷ <x, ♣>
+-- id = <id, id> ∷ ∀ x . <x, ♣> ▷ <x, ♣>
 id_TYPExENDO ∷ ∀ i x . (TYPExENDO i) x x
 id_TYPExENDO = TypeEndo id_TYPE id_ENDO
 
 
---- TODO
-
 -- For every category, there is an 'opposite' category.
 -- This is exactly the same category, but we look at all the arrows as if they
 -- are going in the other direction.
--- With `TYPE` the arrow type `d ▷ c` is the function type `d → c`,
+-- In the category `TYPE`, the arrow type `d ▷ c` is the function type `d → c`.
 -- When considering the opposite of `TYPE`: the `Op TYPE` category;
--- here the arrow type `d ▷ c` is the type `c → d`
+-- the same function type `d → c` corresponds with the arrow type `c ▷ d`,
+-- and the arrow type `d ▷ c` is the function type `c → d`.
 -- (∘) ∷ ∀ a b x . (a ▷ b) → (x ▷ a) → (x ▷ b)
 compose_OpTYPE ∷ ∀ a b x . (b → a) → (a → x) → (b → x)
 compose_OpTYPE ba ax b = ax (ba b)
 -- the identity arrows are identical
 id_OpTYPE ∷ ∀ i . i → i
 id_OpTYPE i = i
+
+
+-- Suppose we take the cross product of `Op TYPE` and `TYPE`: `OpType×TYPE`.
+-- Objects are pairs of objects, first from `Op TYPE` and second from `TYPE`:
+-- e.g: `<a, b>`.
+-- Arrows are pairs: `<f, g> ∷ <a, b> ▷ <s, t>`
+-- An arrows types such as `<a, b> ▷ <s, t>` can be modelled in Haskell
+-- as `OpTYPExTYPE a b s t`:
+data OpTYPExTYPE a b s t = OpTypeType (s → a) (b → t)
+compose_OpTYPExTYPE ∷ ∀ a b s t x y .
+  OpTYPExTYPE a b s t → OpTYPExTYPE x y a b → OpTYPExTYPE x y s t
+compose_OpTYPExTYPE (OpTypeType sa bt) (OpTypeType ax yb) =
+  OpTypeType (compose_OpTYPE sa ax) (compose_TYPE bt yb)
+-- id = <id, id> ∷ <x, y> ▷ <x, y>
+id_OpTYPExTYPE ∷ ∀ x y . OpTYPExTYPE x y x y
+id_OpTYPExTYPE = OpTypeType id_OpTYPE id_TYPE
 
 
 -- TODO
