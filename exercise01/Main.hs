@@ -1,5 +1,8 @@
 {-# Language DataKinds #-}
+{-# Language DerivingStrategies #-}
 {-# Language GADTs #-}
+{-# Language GeneralizedNewtypeDeriving #-}
+{-# Language InstanceSigs #-}
 {-# Language RankNTypes #-}
 {-# Language TypeInType #-}
 {-# Language UnicodeSyntax #-}
@@ -61,6 +64,7 @@ id_TYPE i = i
 -- this means our arrow type `♣ ▷ ♣` is equivalent to `Bool`
 -- let's make a newtype for this - so we have `ALL = ♣ ▷ ♣`
 newtype ALL = All Bool
+  deriving newtype Show
 -- composition/append is `&&`
 -- (∘) ∷ (♣ ▷ ♣) → (♣ ▷ ♣) → (♣ ▷ ♣)
 compose_ALL ∷ ALL → ALL → ALL
@@ -175,7 +179,8 @@ id_OpTYPExTYPE ∷ ∀ x y . OpTYPExTYPE x y x y
 id_OpTYPExTYPE = OpTypeType id_OpTYPE id_TYPE
 
 
--- TODO
+-- Now that we've introduced some categories
+-- lets take a look at functors
 
 -- functors map from one category to another
 -- a functor `F` from a category `C` to a category `D`
@@ -184,12 +189,112 @@ id_OpTYPExTYPE = OpTypeType id_OpTYPE id_TYPE
 -- to an arrow `F q ∷ F A ▷ F B` in `D`
 -- think of the `F q` bit in a similar way to `fmap q`
 
+
+
+
+-- TODO
+
 -- for any category `C` and any object `X`, it turns out that
 -- the partially-applied arrow type `X ▷ ?` is a functor from `C` to `TYPE`
 -- it maps `C`-objects `B` to `TYPE`-objects `(X ▷ ?) B`, which is the type `X ▷ B`
 -- it maps `C`-arrows `f ∷ A ▷ B` to `TYPE`-arrows `(X ▷ ?) f ∷ (X ▷ A) ▷ (X ▷ B)`
 -- which is the function `(X ▷ ?) f ∷ (X ▷ A) → (X ▷ B)`
 -- this mapping on arrows is actually partially applied composition:
--- `(X ▷ ?) : (A ▷ B) → (X ▷ A) → (X ▷ B)`
+-- `(X ▷ ?) ∷ (A ▷ B) → (X ▷ A) → (X ▷ B)`
 -- `(X ▷ ?) = (∘)`
+
+
+-- TODO
+
+-- functors `f` from `ALL` to `TYPE`
+class ALLTo f where
+  -- allMap ∷ ∀ a b . (a ▷ b) → (f a ▷ f b)
+  -- allMap ∷ (♣ ▷ ♣) → (f ♣ ▷ f ♣)
+  allMap ∷ ALL → f → f
+
+-- instance ALLTo (♣ ▷ _) where
+instance ALLTo ALL where
+  -- allMap ∷ (♣ ▷ ♣) → (♣ ▷ _) ♣ → (♣ ▷ _) ♣
+  -- allMap ∷ (♣ ▷ ♣) → (♣ ▷ ♣) → (♣ ▷ ♣)
+  allMap ∷ ALL → ALL → ALL
+  allMap = compose_ALL
+
+
+-- ALLYoneda f a = ∀ b . (a ▷ b) → f b
+-- ALLYoneda f ♣ = (♣ ▷ ♣) → f ♣
+newtype ALLYoneda f = AllYoneda (ALL → f)
+
+instance ALLTo (ALLYoneda f) where
+  allMap a (AllYoneda y) = AllYoneda (\b → y (compose_ALL a b))
+
+-- toALLYoneda ∷ ∀ f a . ALLTo f a ⇒ f a → ALLYoneda f a
+-- toALLYoneda ∷ ∀ f . ALLTo f ♣ ⇒ f ♣ → ALLYoneda f ♣
+toALLYoneda ∷ ∀ f . ALLTo f ⇒ f → ALLYoneda f
+toALLYoneda f = AllYoneda (\a → allMap a f)
+
+-- unALLYoneda ∷ ∀ f a . ALLYoneda f a → f a
+-- unALLYoneda ∷ ∀ f . ALLYoneda f ♣ → f ♣
+unALLYoneda ∷ ∀ f . ALLYoneda f → f
+unALLYoneda (AllYoneda y) = y id_ALL
+
+
+-- type ALLCoyoneda f b = ∃ a . ( a ▷ b , f a )
+-- type ALLCoyoneda f ♣ = ( ♣ ▷ ♣ , f ♣ )
+data ALLCoyoneda f = AllCoyoneda ALL f
+
+instance ALLTo (ALLCoyoneda f) where
+  allMap a (AllCoyoneda b f) = AllCoyoneda (compose_ALL a b) f
+
+toALLCoyoneda ∷ ∀ f . ALL → f → ALLCoyoneda f
+toALLCoyoneda a f = AllCoyoneda a f
+
+liftALLCoyoneda ∷ ∀ f . f → ALLCoyoneda f
+liftALLCoyoneda f = AllCoyoneda id_ALL f
+
+lowerALLCoyoneda ∷ ∀ f . ALLTo f ⇒ ALLCoyoneda f → f
+lowerALLCoyoneda (AllCoyoneda a f) = allMap a f
+
+-- ∀ f a . ALLTo f ⇒ ( f a ≅ ALLCoyoneda f a )
+-- ∀ f ♣ . ALLTo f ⇒ ( f ♣ ≅ ALLCoyoneda f ♣ )
+-- ∀ f . ALLTo f ⇒ ( f ≅ ALLCoyoneda f )
+
+
+-- ALLYonedaO a b = ∀ f . ALLTo f ⇒ f a → f b
+-- ALLYonedaO ♣ ♣ = ∀ f . ALLTo f ⇒ f ♣ → f ♣
+type ALLYonedaO = ∀ f . ALLTo f ⇒ f → f
+
+-- toALLYonedaO ∷ ∀ a b . (a ▷ b) → ALLYonedaO a b
+-- toALLYonedaO ∷ (♣ ▷ ♣) → ALLYonedaO ♣ ♣
+toALLYonedaO ∷ ALL → ALLYonedaO
+toALLYonedaO = allMap
+
+-- toALLYonedaO ∷ ∀ a b . ALLYonedaO a b → (a ▷ b)
+-- toALLYonedaO ∷ ALLYonedaO ♣ ♣ → (♣ ▷ ♣)
+unALLYonedaO ∷ ALLYonedaO → ALL
+unALLYonedaO y = y id_ALL
+
+-- ∀ a b . ( (a ▷ b) ≅ ALLYonedaO a b )
+-- (♣ ▷ ♣) ≅ ALLYonedaO ♣ ♣
+-- ALL ≅ ALLYonedaO
+
+
+
+-- functors `f` from `TYPE` to `TYPE`
+class TYPETo f where
+  -- typeMap ∷ ∀ a b . (a ▷ b) → (f a ▷ f b)
+  typeMap ∷ ∀ a b . (a → b) → (f a → f b)
+
+-- TYPEYoneda f a = ∀ b . (a ▷ b) → f b
+newtype TYPEYoneda f a = TypeYoneda (∀ b . (a → b) → f b)
+
+instance TYPETo (TYPEYoneda f) where
+  typeMap ∷ ∀ a b . (a → b) → (TYPEYoneda f a → TYPEYoneda f b)
+  typeMap a2b (TypeYoneda y) = TypeYoneda (\b2c → y (compose_TYPE b2c a2b))
+
+-- TYPECoyoneda f b = ∃ a . ( a ▷ b, f a )
+-- TYPECoyoneda f b = ∃ a . ( a → b, f a )
+data TYPECoyoneda f b = ∀ a . TypeCoyoneda (a → b) (f a)
+
+-- TYPEYonedaO a b = ∀ g . TYPETo g ⇒ (g a ▷ g b)
+
 
