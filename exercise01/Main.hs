@@ -1,10 +1,8 @@
-{-# Language DataKinds #-}
 {-# Language DerivingStrategies #-}
 {-# Language GADTs #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language InstanceSigs #-}
 {-# Language RankNTypes #-}
-{-# Language TypeInType #-}
 {-# Language UnicodeSyntax #-}
 module Main where
 
@@ -190,27 +188,46 @@ id_OpTYPExTYPE = OpTypeType id_OpTYPE id_TYPE
 -- think of the `F q` bit in a similar way to `fmap q`
 
 
-
-
 -- TODO
 
 -- for any category `C` and any object `X`, it turns out that
--- the partially-applied arrow type `X ▷ ?` is a functor from `C` to `TYPE`
--- it maps `C`-objects `B` to `TYPE`-objects `(X ▷ ?) B`, which is the type `X ▷ B`
--- it maps `C`-arrows `f ∷ A ▷ B` to `TYPE`-arrows `(X ▷ ?) f ∷ (X ▷ A) ▷ (X ▷ B)`
--- which is the function `(X ▷ ?) f ∷ (X ▷ A) → (X ▷ B)`
+-- the partially-applied arrow type `X ▷ _` is a functor from `C` to `TYPE`
+-- it maps `C`-objects `B` to `TYPE`-objects `(X ▷ _) B`, which is the type `X ▷ B`
+-- it maps `C`-arrows `f ∷ A ▷ B` to `TYPE`-arrows `(X ▷ _) f ∷ (X ▷ A) ▷ (X ▷ B)`
+-- which is the function `(X ▷ _) f ∷ (X ▷ A) → (X ▷ B)`
 -- this mapping on arrows is actually partially applied composition:
--- `(X ▷ ?) ∷ (A ▷ B) → (X ▷ A) → (X ▷ B)`
--- `(X ▷ ?) = (∘)`
+-- `(X ▷ _) ∷ (A ▷ B) → (X ▷ _) A → (X ▷ _) B`
+-- `(X ▷ _) ∷ (A ▷ B) → (X ▷ A) → (X ▷ B)`
+-- `(X ▷ _) ab xa = ab ∘ xa`
 
+-- This `(X ▷ _)` is an example of what is called a (covariant) "Yoneda Embedding".
+-- Another "Yoneda Embedding" would be `(_ ▷ Y)`, however this would be a
+-- contravariant functor from `C`.  That is, it maps from `Op C`.
+-- It maps `Op C`-objects `A` to `TYPE`-objects `(_ ▷ Y) A`,
+-- which is the type `A ▷ Y`.
+-- It maps `Op C`-arrows `f ∷ A ▷ B` to `TYPE`-arrows `(_ ▷ Y) f ∷ (B ▷ Y) ▷ (A ▷ Y)`
+-- Again, this mapping on arrows is actually partially applied composition:
+-- `(_ ▷ Y) ∷ (A ▷ B) → (_ ▷ Y) B → (_ ▷ Y) A`
+-- `(_ ▷ Y) ∷ (A ▷ B) → (B ▷ Y) → (A ▷ Y)`
+-- `(_ ▷ Y) ab by = by ∘ ab`
 
--- TODO
+-- Let's pick some categories and look at what the "Yoneda Embedding"s look like.
+
+-- Suppose we are looking at the category `ALL`.
+-- We can model functors from `ALL` to `TYPE` by a type class such as:
 
 -- functors `f` from `ALL` to `TYPE`
 class ALLTo f where
   -- allMap ∷ ∀ a b . (a ▷ b) → (f a ▷ f b)
   -- allMap ∷ (♣ ▷ ♣) → (f ♣ ▷ f ♣)
   allMap ∷ ALL → f → f
+
+-- This may look a bit odd, but because (like before) there is only one object
+-- in `ALL` (`♣`), so we can trivially omit it.
+
+-- The covariant Yoneda Embedding `(♣ ▷ _)` is such a functor
+-- with the mapping function `(♣ ▷ _)` being `(∘)` in `ALL`,
+-- (as described previously).
 
 -- instance ALLTo (♣ ▷ _) where
 instance ALLTo ALL where
@@ -219,6 +236,54 @@ instance ALLTo ALL where
   allMap ∷ ALL → ALL → ALL
   allMap = compose_ALL
 
+-- To look at the contravariant Yoneda Embedding from `ALL`, we'll want to
+-- introduce contravariant functors from `ALL`.
+-- That is, functors from `ALL` to `TYPE`
+-- But because all the objects are trivial, this class will look identical to
+-- the covariant version
+
+class ContraALLTo f where
+  -- contraAllMap ∷ ∀ a b . (a ▷ b) → (f a ▷ f b)
+  --                        ^(Op ALL) ^TYPE
+  --                        ^ALL      ^(Op TYPE)
+  -- contraAllMap ∷ ∀ a b . (a ▷ b) → (f b ▷ f a)
+  --                        ^ALL      ^TYPE
+  --                        ^(Op All) ^(Op TYPE)
+  -- contraAllMap ∷ (♣ ▷ ♣) → (f ♣ ▷ f ♣)
+  contraAllMap ∷ ALL → f → f
+
+-- In the above, I have annotated (`^`) which categories the arrow types could
+-- be considered to be from.
+
+-- Note: for (covariant) functors from `Op C` to `D`, we can equivalently
+-- describe them as (covariant) functors from `C` to `Op D`, or as
+-- contravariant functors from `C` to `D`.  These are all the same thing.
+-- So in this type signature of `contraAllMap`:
+
+-- TODO
+newtype DualALL = DualAll ALL
+
+-- TODO
+instance ContraALLTo DualALL where
+  contraAllMap f (DualAll g) = DualAll (compose_ALL g f)
+
+
+-- TODO
+
+-- functors `f` from `TYPE` to `TYPE`
+class TYPETo f where
+  -- typeMap ∷ ∀ a b . (a ▷ b) → (f a ▷ f b)
+  typeMap ∷ ∀ a b . (a → b) → (f a → f b)
+
+-- functors `f` from `TYPE` to `TYPE`
+class ContraTYPETo f where
+  -- contraTypeMap ∷ ∀ a b . (a ▷ b) → (f b ▷ f a)
+  contraTypeMap ∷ ∀ a b . (a → b) → (f b → f a)
+
+
+
+
+-- TODO
 
 -- ALLYoneda f a = ∀ b . (a ▷ b) → f b
 -- ALLYoneda f ♣ = (♣ ▷ ♣) → f ♣
@@ -278,11 +343,6 @@ unALLYonedaO y = y id_ALL
 -- ALL ≅ ALLYonedaO
 
 
-
--- functors `f` from `TYPE` to `TYPE`
-class TYPETo f where
-  -- typeMap ∷ ∀ a b . (a ▷ b) → (f a ▷ f b)
-  typeMap ∷ ∀ a b . (a → b) → (f a → f b)
 
 -- TYPEYoneda f a = ∀ b . (a ▷ b) → f b
 newtype TYPEYoneda f a = TypeYoneda (∀ b . (a → b) → f b)
