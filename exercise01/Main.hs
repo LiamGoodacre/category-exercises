@@ -113,9 +113,14 @@ instance Monoid (ENDO i) where
   mempty = id_ENDO
 
 
--- Another monoid that you perhaps already know of is lists with `(++)` and `[]`
+-- Another monoid that you perhaps already know of is lists with `(++)` and `[]`.
+-- Remember, there's a single object `♣` in this category.
+-- In this case the arrow type `(♣ ▷ ♣)` is the type `[i]`
+-- i.e lists of `i`s, for some type `i`.
+-- (<>) ∷ (♣ ▷ ♣) → (♣ ▷ ♣) → (♣ ▷ ♣)
 compose_LIST ∷ ∀ i . [i] → [i] → [i]
 compose_LIST l r = l ++ r
+-- mempty ∷ (♣ ▷ ♣)
 id_LIST ∷ ∀ i . [i]
 id_LIST = []
 
