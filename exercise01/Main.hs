@@ -82,14 +82,14 @@ instance Monoid ALL where
 -- We can construct a monoid from an existing category by picking one object and
 -- all the arrows that start and end at that object - forgetting about everything else.
 -- If we do this with the `TYPE` category; pick an object, e.g `Int`.
--- Regard all the arrows `f ∷ Int ▷ Int` as elements of the monoid `f ∷ ♣`.
+-- Regard all the arrows `f ∷ Int ▷ Int` as elements of the monoid.
 -- Then, append follows from composition of the original category;
 -- and mempty follows from the identity.
 newtype ENDO_INT = EndoInt (Int → Int)
--- (<>) ∷ ♣ → ♣ → ♣
+-- (<>) ∷ (Int ▷ Int) → (Int ▷ Int) → (Int ▷ Int)
 compose_ENDO_INT ∷ ENDO_INT → ENDO_INT → ENDO_INT
 compose_ENDO_INT (EndoInt l) (EndoInt r) = EndoInt (compose_TYPE l r)
--- mempty ∷ ♣
+-- mempty ∷ (Int ▷ Int)
 id_ENDO_INT ∷ ENDO_INT
 id_ENDO_INT = EndoInt id_TYPE
 instance Semigroup ENDO_INT where
@@ -101,10 +101,10 @@ instance Monoid ENDO_INT where
 -- We can clearly generalise this in Haskell by allowing the user to pick which
 -- object from `TYPE` that they care about.
 newtype ENDO i = Endo (i → i)
--- (<>) ∷ ♣ → ♣ → ♣
+-- (<>) ∷ ∀ i . (i ▷ i) → (i ▷ i) → (i ▷ i)
 compose_ENDO ∷ ∀ i . ENDO i → ENDO i → ENDO i
 compose_ENDO (Endo l) (Endo r) = Endo (compose_TYPE l r)
--- mempty ∷ ♣
+-- mempty ∷ ∀ i . (i ▷ i)
 id_ENDO ∷ ∀ i . ENDO i
 id_ENDO = Endo id_TYPE
 instance Semigroup (ENDO i) where
