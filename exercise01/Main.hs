@@ -363,3 +363,28 @@ data TYPECoyoneda f b = ∀ a . TypeCoyoneda (a → b) (f a)
 -- TYPEYonedaO a b = ∀ g . TYPETo g ⇒ (g a ▷ g b)
 
 
+-- TODO: For the future
+-- The `((Δ) ∘ (+))` monad
+
+crossMap ∷ (a → b, x → y) → (a, x) → (b, y)
+crossMap (f, g) (a, x) = (f a, g x)
+($$) = crossMap
+
+-- because we are in the TYPE×TYPE category
+-- morphisms are pairs of morphisms from TYPE
+-- note that we are in fact modelling TYPE×TYPE in TYPE
+pureDiagCoprod ∷ (l → Either l r, r → Either l r)
+pureDiagCoprod = (Left, Right)
+
+bindDiagCoprod ∷
+  (Either l r, Either l r) →
+  (l → Either a b, r → Either a b) →
+  (Either a b, Either a b)
+bindDiagCoprod (l, r) (f, g) = (either f g l, either f g r)
+
+egDiagCoprod ∷ (Either Int String, Either Int String)
+egDiagCoprod = pureDiagCoprod $$ (42, "abc")
+
+egDiagCoprod2 ∷ (Either Int String, Either Int String)
+egDiagCoprod2 = bindDiagCoprod egDiagCoprod pureDiagCoprod
+
