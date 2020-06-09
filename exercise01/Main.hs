@@ -49,8 +49,10 @@ id_TYPE ∷ ∀ i . i → i
 id_TYPE i = i
 
 
--- A monoid is a category with exactly one object, say `♣`.
--- The only arrow type is `♣ ▷ ♣`.
+-- A monoid is any category with exactly one object.
+-- As there is only one object, it doesn't matter what we call it.
+-- Lets use the name `♣`.
+-- So the only arrow type is `♣ ▷ ♣`.
 -- Therefore all the arrows are composable.
 -- The arrows are referred to as the "elements" or "members" of the monoid.
 -- composition `(∘)` is called append `(<>)`
